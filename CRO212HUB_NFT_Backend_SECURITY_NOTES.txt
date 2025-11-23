@@ -1,0 +1,119 @@
+# SECURITY NOTES – CRO212HUB Backend
+
+Project: CRO212HUB – NFT Generator and Launchpad  
+Repo: CRO212HUB_NFT_Backend  
+File: SECURITY_NOTES.md  
+Owner: TO FILL IN BY DEV (name, GitHub handle)  
+Last updated: TO FILL IN BY DEV (YYYY-MM-DD)
+
+## Purpose
+
+This file defines security expectations for the **backend** API and services used by the CRO212HUB NFT Generator and Launchpad.
+
+The backend:
+- Handles trait uploads, generation triggers, project configuration, and admin actions.
+- Must be transparent, secure, and free from any backdoor behavior.
+- Must respect the rules in this document.
+
+If the code and this document ever disagree, it must be fixed so they match.
+
+---
+
+## 1. Allowed External Services
+
+The backend is allowed to communicate with:
+
+- Cronos RPC / node provider  
+  - RPC endpoint: TO FILL IN BY DEV
+- Storage and file services for images/metadata  
+  - Example: IPFS pinning service, S3, or similar.  
+  - Names and URLs: TO FILL IN BY DEV
+- Email or webhook provider for notifications (if used)  
+  - Service name and endpoint: TO FILL IN BY DEV
+
+Not allowed without my written approval:
+- Any outbound HTTP calls to unknown domains not listed above.
+- Sending data to analytics, tracking, or marketing services.
+
+If the developer adds a new service:
+1. Add its name and URL here.
+2. State what it is used for.
+
+---
+
+## 2. Data and Logging Rules
+
+The backend may store:
+- Project configuration (names, supply, mint price, etc).
+- Paths or references to trait files, generated images, and metadata.
+- Wallet addresses and basic stats needed for the launchpad.
+
+The backend must NOT:
+- Store private keys or seed phrases for users.
+- Log sensitive values such as:
+  - Private keys
+  - Raw access tokens
+  - Full contents of environment secrets
+
+Logging guidelines:
+- Logs may include high-level events (project created, generation started, mint config updated).
+- Logs must NOT include full secrets, passwords, or full JWT tokens.
+
+---
+
+## 3. Admin and Public Endpoints
+
+All backend endpoints must be clearly categorized:
+
+- Public endpoints:
+  - Example: fetch public project info, mint config, or status.
+- Admin endpoints:
+  - Example: create/update project, upload traits, trigger generation, set contract address.
+
+Requirements:
+- Admin endpoints must require authentication or a secure mechanism.
+- Admin access rules must be documented:
+  - For example: “Admin is authenticated via username/password”, “Admin token in header”, etc.
+  - TO FILL IN BY DEV: brief description of current admin auth method.
+
+No hidden admin behavior:
+- No endpoints that allow dangerous actions (like wiping data, changing owners, etc) without being documented here.
+- Any endpoint that can modify project data or configuration must be easily found in the code and listed in this file.
+
+---
+
+## 4. Generation and File Handling
+
+Trait uploads and generation:
+- Uploaded trait files must be handled safely:
+  - Stored in designated directories.
+  - Not executed as code.
+- Generated images and metadata files must:
+  - Be stored in a clear folder structure.
+  - Not overwrite unrelated files.
+
+Any automatic file cleanup or deletion logic must be:
+- Clearly documented in comments.
+- Safe (no deleting outside of the intended folders).
+
+---
+
+## 5. Backdoor and Ownership Rules
+
+The backend must NOT:
+- Send any secret data to the developer’s own servers.
+- Implement hidden API keys, admin users, or maintenance modes that are not documented.
+- Force revenue or funds to any address that is not documented in the contracts and specs.
+
+Developer agrees:
+- To keep all secrets in environment variables, not hard-coded in the repository.
+- To not include any code that changes behavior based on the owner’s wallet or specific addresses unless documented here.
+
+---
+
+## 6. Security Issues and Notes
+
+If security-related decisions or tradeoffs are made, they should be briefly listed here.
+
+Known security notes (to be maintained by dev):
+- TO FILL IN BY DEV
