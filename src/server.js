@@ -3,16 +3,42 @@
 
 require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware - Allow all CORS
-app.use(cors());
+// CORS - Must be FIRST before any other middleware
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    console.log(`[${new Date().toISOString()}] OPTIONS ${req.path} - Preflight request`);
+    return res.status(200).end();
+  }
+
+  next();
+});
+
+// Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Request logging middleware (after body parsing so we can log body)
+app.use((req, _res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  if (Object.keys(req.query).length > 0) {
+    console.log('  Query params:', req.query);
+  }
+  if (req.body && Object.keys(req.body).length > 0) {
+    console.log('  Body params:', req.body);
+  }
+  next();
+});
 
 // Serve static files (generated images and metadata)
 app.use('/output', express.static(path.join(__dirname, '../output')));

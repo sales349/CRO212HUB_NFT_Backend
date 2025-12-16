@@ -5,14 +5,21 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["nft", "generator", "launchpad", "cronos", "web3"],
+  "keywords": [
+    "nft",
+    "generator",
+    "launchpad",
+    "cronos",
+    "web3"
+  ],
   "author": "CRO212HUB",
   "license": "ISC",
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",
+    "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",

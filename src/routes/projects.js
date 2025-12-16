@@ -57,45 +57,68 @@ router.post('/', async (req, res) => {
       description,
       max_supply,
       mint_price,
+      wallet_address,
+      treasury_address,
+      revenue_split,
+      // Legacy field names (for backward compatibility)
       treasury_wallet,
       platform_fee_bps
     } = req.body;
 
+    console.log(`Creating new project: ${name} (${symbol})`);
+    console.log(`Wallet: ${wallet_address || 'not provided'}`);
+
     // Validate required fields
     if (!name || !symbol || !max_supply || !mint_price) {
+      console.log('Validation failed: missing required fields');
       return res.status(400).json({
+        success: false,
         error: 'Missing required fields: name, symbol, max_supply, mint_price'
       });
     }
 
+    // Map frontend field names to backend/database field names
+    const projectData = {
+      name,
+      symbol,
+      description: description || '',
+      max_supply: parseInt(max_supply),
+      mint_price: mint_price.toString(),
+      wallet_address: wallet_address || null,
+      treasury_wallet: treasury_address || treasury_wallet || null,
+      platform_fee_bps: revenue_split ? Math.round(revenue_split * 100) : (platform_fee_bps || 500),
+      status: 'setup'
+    };
+
+    console.log('Inserting project data:', projectData);
+
     // Insert project into database
     const { data, error } = await supabase
       .from('cro_212hub_projects')
-      .insert({
-        name,
-        symbol,
-        description: description || '',
-        max_supply: parseInt(max_supply),
-        mint_price: mint_price.toString(),
-        treasury_wallet: treasury_wallet || null,
-        platform_fee_bps: platform_fee_bps || 500,
-        status: 'setup'
-      })
+      .insert(projectData)
       .select()
       .single();
 
     if (error) {
       console.error('Database error:', error);
-      return res.status(500).json({ error: 'Failed to create project' });
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to create project',
+        details: error.message
+      });
     }
 
+    console.log(`Project created successfully with ID: ${data.id}`);
     res.status(201).json({
       success: true,
-      project: data
+      data: data
     });
   } catch (error) {
     console.error('Error creating project:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
   }
 });
 
@@ -105,6 +128,7 @@ router.post('/', async (req, res) => {
  */
 router.get('/', async (req, res) => {
   try {
+    console.log('Fetching all projects from database...');
     const { data, error } = await supabase
       .from('cro_212hub_projects')
       .select('*')
@@ -115,9 +139,10 @@ router.get('/', async (req, res) => {
       return res.status(500).json({ error: 'Failed to fetch projects' });
     }
 
+    console.log(`Successfully fetched ${data?.length || 0} projects`);
     res.json({
       success: true,
-      projects: data
+      data: data
     });
   } catch (error) {
     console.error('Error fetching projects:', error);
@@ -160,7 +185,7 @@ router.get('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      project: {
+      data: {
         ...data,
         trait_count: traitCount || 0,
         token_count: tokenCount || 0
@@ -199,7 +224,7 @@ router.put('/:id', async (req, res) => {
 
     res.json({
       success: true,
-      project: data
+      data: data
     });
   } catch (error) {
     console.error('Error updating project:', error);
@@ -261,7 +286,7 @@ router.get('/:id/public', async (req, res) => {
 
     res.json({
       success: true,
-      project: data
+      data: data
     });
   } catch (error) {
     console.error('Error fetching public project:', error);
@@ -369,7 +394,7 @@ router.get('/:id/traits', async (req, res) => {
 
     res.json({
       success: true,
-      traits: data,
+      data: data,
       traitsByLayer
     });
   } catch (error) {

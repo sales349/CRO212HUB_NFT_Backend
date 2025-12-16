@@ -111,8 +111,21 @@ async function generateAndSaveMetadata(params) {
     tokenId,
     imagePath,
     attributes,
-    description
+    description,
+    baseUri = null
   } = params;
+
+  // Construct image URL
+  let imageUrl;
+  if (baseUri) {
+    // Use provided base URI
+    // Ensure base URI ends with / for proper concatenation
+    const normalizedBaseUri = baseUri.endsWith('/') ? baseUri : `${baseUri}/`;
+    imageUrl = `${normalizedBaseUri}${tokenId}.png`;
+  } else {
+    // Fallback to placeholder
+    imageUrl = `ipfs://PLACEHOLDER/${tokenId}.png`;
+  }
 
   // Generate metadata object
   const metadata = generateMetadata({
@@ -120,7 +133,7 @@ async function generateAndSaveMetadata(params) {
     tokenId,
     name: `${projectName} #${tokenId}`,
     description: description || `${projectName} NFT collection - Token #${tokenId}`,
-    imageUrl: `ipfs://PLACEHOLDER/${tokenId}.png`,
+    imageUrl,
     attributes
   });
 
@@ -154,6 +167,7 @@ async function generateAndSaveMetadata(params) {
 async function generateCollectionMetadata(projectId, projectName, nftData, options = {}) {
   const {
     description = `${projectName} NFT collection`,
+    baseUri = null,
     onProgress = null
   } = options;
 
@@ -162,6 +176,11 @@ async function generateCollectionMetadata(projectId, projectName, nftData, optio
   const total = nftData.length;
 
   console.log(`\n📝 Starting metadata generation for ${total} NFTs`);
+  if (baseUri) {
+    console.log(`📦 Using Base URI: ${baseUri}`);
+  } else {
+    console.log(`⚠️  No Base URI provided - using placeholder`);
+  }
 
   for (let i = 0; i < nftData.length; i++) {
     const { tokenId, imagePath, attributes } = nftData[i];
@@ -173,7 +192,8 @@ async function generateCollectionMetadata(projectId, projectName, nftData, optio
         tokenId,
         imagePath,
         attributes,
-        description
+        description,
+        baseUri
       });
 
       results.push(result);

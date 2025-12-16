@@ -13,18 +13,22 @@ CREATE TABLE IF NOT EXISTS cro_212hub_projects (
   description TEXT,
   max_supply INTEGER NOT NULL,
   mint_price TEXT NOT NULL, -- Stored as string to preserve decimal precision (e.g. "1.5" CRO)
+  wallet_address TEXT, -- Wallet address of the project creator/owner
   contract_address TEXT,
   base_uri TEXT,
   treasury_wallet TEXT,
   platform_fee_bps INTEGER DEFAULT 500, -- Basis points (500 = 5%)
+  layer_order JSONB, -- Array of layer names in render order (bottom to top)
+  rarity_config JSONB, -- Trait weight configuration for weighted generation: { "layerName": { "traitName": weight } }
   status TEXT NOT NULL DEFAULT 'setup', -- setup, traits_uploaded, generated, deployed, active
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Add index for faster queries
+-- Add indexes for faster queries
 CREATE INDEX IF NOT EXISTS idx_projects_status ON cro_212hub_projects(status);
 CREATE INDEX IF NOT EXISTS idx_projects_created_at ON cro_212hub_projects(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_projects_wallet_address ON cro_212hub_projects(wallet_address);
 
 -- ============================================================================
 -- Table: cro_212hub_traits

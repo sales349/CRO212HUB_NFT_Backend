@@ -48,20 +48,64 @@ async function getProjectTraits(projectId) {
 }
 
 /**
+ * Select one trait using weighted random selection
+ * @param {Array} traits - Available traits in a layer
+ * @param {Object} weights - Weights for each trait { traitName: weight }
+ * @returns {Object} Selected trait
+ */
+function selectWeightedRandomTrait(traits, weights) {
+  // Calculate total weight
+  let totalWeight = 0;
+  const weightedTraits = traits.map(trait => {
+    const weight = weights[trait.trait_name] || 1; // Default weight = 1 if not specified
+    totalWeight += weight;
+    return { trait, weight };
+  });
+
+  // Generate random number between 0 and totalWeight
+  const random = Math.random() * totalWeight;
+
+  // Select trait based on weighted random
+  let cumulativeWeight = 0;
+  for (const { trait, weight } of weightedTraits) {
+    cumulativeWeight += weight;
+    if (random <= cumulativeWeight) {
+      return trait;
+    }
+  }
+
+  // Fallback to last trait (should not happen)
+  return traits[traits.length - 1];
+}
+
+/**
  * Select one random trait from each layer
  * @param {Object} traitsByLayer - Traits organized by layer type
  * @param {Array} layerOrder - Order of layers to process
+ * @param {Object|null} rarityConfig - Optional rarity weights { layerName: { traitName: weight } }
  * @returns {Array} Selected traits (one per layer)
  */
-function selectRandomTraits(traitsByLayer, layerOrder = DEFAULT_LAYER_ORDER) {
+function selectRandomTraits(traitsByLayer, layerOrder = [], rarityConfig = null) {
   const selectedTraits = [];
 
   layerOrder.forEach(layerType => {
     const availableTraits = traitsByLayer[layerType];
     if (availableTraits && availableTraits.length > 0) {
-      // Select random trait from this layer
-      const randomIndex = Math.floor(Math.random() * availableTraits.length);
-      selectedTraits.push(availableTraits[randomIndex]);
+      // Check if we have rarity weights for this layer
+      const hasWeights = rarityConfig && rarityConfig[layerType];
+
+      if (hasWeights) {
+        // Use weighted random selection
+        const selectedTrait = selectWeightedRandomTrait(
+          availableTraits,
+          rarityConfig[layerType]
+        );
+        selectedTraits.push(selectedTrait);
+      } else {
+        // Use uniform random selection (original behavior)
+        const randomIndex = Math.floor(Math.random() * availableTraits.length);
+        selectedTraits.push(availableTraits[randomIndex]);
+      }
     }
   });
 
@@ -145,13 +189,18 @@ async function combineTraitImages(traits, outputPath) {
  * @returns {Promise<Object>} Generated NFT data
  */
 async function generateSingleNFT(projectId, tokenId, options = {}) {
-  const { layerOrder = DEFAULT_LAYER_ORDER } = options;
+  const { layerOrder: providedLayerOrder = null, rarityConfig = null } = options;
 
   // Get all available traits
   const traitsByLayer = await getProjectTraits(projectId);
 
-  // Select random traits
-  const selectedTraits = selectRandomTraits(traitsByLayer, layerOrder);
+  // If no layer order provided, use all available layers sorted alphabetically
+  const layerOrder = providedLayerOrder && providedLayerOrder.length > 0
+    ? providedLayerOrder
+    : Object.keys(traitsByLayer).sort();
+
+  // Select random traits (with optional weighted selection)
+  const selectedTraits = selectRandomTraits(traitsByLayer, layerOrder, rarityConfig);
 
   if (selectedTraits.length === 0) {
     throw new Error('No traits available for generation');
@@ -197,19 +246,32 @@ async function generateSingleNFT(projectId, tokenId, options = {}) {
  */
 async function generateCollection(projectId, count, options = {}) {
   const {
-    layerOrder = DEFAULT_LAYER_ORDER,
+    layerOrder: providedLayerOrder = null,
+    rarityConfig = null,
     onProgress = null
   } = options;
+
+  // If no layer order provided, get all available layers from traits
+  let layerOrder = providedLayerOrder;
+  if (!layerOrder || layerOrder.length === 0) {
+    const traitsByLayer = await getProjectTraits(projectId);
+    layerOrder = Object.keys(traitsByLayer).sort();
+    console.log(`ℹ️  No layer order specified, using available layers`);
+  }
 
   const results = [];
   const errors = [];
 
   console.log(`\n🎨 Starting generation of ${count} NFTs for project ${projectId}`);
-  console.log(`📋 Layer order: ${layerOrder.join(' → ')}\n`);
+  console.log(`📋 Layer order: ${layerOrder.join(' → ')}`);
+  if (rarityConfig) {
+    console.log(`⚖️  Using weighted rarity configuration`);
+  }
+  console.log('');
 
   for (let tokenId = 1; tokenId <= count; tokenId++) {
     try {
-      const result = await generateSingleNFT(projectId, tokenId, { layerOrder });
+      const result = await generateSingleNFT(projectId, tokenId, { layerOrder, rarityConfig });
       results.push(result);
 
       // Progress callback
@@ -246,19 +308,32 @@ async function generateCollection(projectId, count, options = {}) {
 /**
  * Validate that all required trait layers exist for a project
  * @param {string} projectId - UUID of the project
- * @param {Array} requiredLayers - Required layer types
+ * @param {Array|null} requiredLayers - Required layer types (optional, uses dynamic layers if null)
  * @returns {Promise<Object>} Validation result
  */
-async function validateProjectTraits(projectId, requiredLayers = DEFAULT_LAYER_ORDER) {
+async function validateProjectTraits(projectId, requiredLayers = null) {
   const traitsByLayer = await getProjectTraits(projectId);
   const availableLayers = Object.keys(traitsByLayer);
   const missingLayers = [];
 
-  requiredLayers.forEach(layer => {
-    if (!traitsByLayer[layer] || traitsByLayer[layer].length === 0) {
-      missingLayers.push(layer);
+  // If requiredLayers is provided, validate those specific layers
+  if (requiredLayers && requiredLayers.length > 0) {
+    requiredLayers.forEach(layer => {
+      if (!traitsByLayer[layer] || traitsByLayer[layer].length === 0) {
+        missingLayers.push(layer);
+      }
+    });
+  } else {
+    // If no required layers specified, just check that at least one layer has traits
+    if (availableLayers.length === 0) {
+      return {
+        isValid: false,
+        availableLayers: [],
+        missingLayers: ['At least one trait layer'],
+        traitCounts: {}
+      };
     }
-  });
+  }
 
   const isValid = missingLayers.length === 0;
 
