@@ -1,1 +1,0 @@
-{"version":3,"file":"viem-client.js","sourceRoot":"","sources":["../../../src/lib/viem-client.ts"],"names":[],"mappings":";;;AAAA,+BAAgD;AAChD,qDAAiD;AACjD,2DAAuE;AAEvE,MAAM,KAAK,GAAG,sBAAS,CAAC,eAAe,KAAK,EAAE,CAAC,CAAC,CAAC,6BAAa,CAAC,CAAC,CAAC,6BAAa,CAAC;AAElE,QAAA,UAAU,GAAG,IAAA,yBAAkB,EAAC;IACzC,KAAK;IACL,SAAS,EAAE,IAAA,WAAI,EAAC,sBAAS,CAAC,cAAc,CAAC;CAC5C,CAAC,CAAC"}
