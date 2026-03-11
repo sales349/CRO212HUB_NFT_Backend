@@ -11,12 +11,14 @@ export const REDIS_CLIENT = 'REDIS_CLIENT';
             provide: REDIS_CLIENT,
             useFactory: () => {
                 const logger = new Logger('RedisModule');
+                const useTls = appConfig.REDIS_URL.startsWith('rediss://');
                 const client = new Redis(appConfig.REDIS_URL, {
                     maxRetriesPerRequest: 3,
                     retryStrategy(times: number) {
                         const delay = Math.min(times * 50, 2000);
                         return delay;
                     },
+                    ...(useTls ? { tls: {} } : {}),
                 });
 
                 client.on('connect', () => logger.log('Redis connected'));

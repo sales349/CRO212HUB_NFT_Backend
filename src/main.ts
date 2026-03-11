@@ -25,12 +25,12 @@ async function bootstrap() {
     );
 
     // Security: Helmet headers
-    await app.register(fastifyHelmet, {
+    await app.register(fastifyHelmet as any, {
         contentSecurityPolicy: appConfig.NODE_ENV === 'production',
     });
 
     // Security: Rate limiting
-    await app.register(fastifyRateLimit, {
+    await app.register(fastifyRateLimit as any, {
         max: 100,
         timeWindow: '1 minute',
         errorResponseBuilder: () => ({
