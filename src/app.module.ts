@@ -5,6 +5,8 @@ import { HealthModule } from './modules/health/health.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { GeneratorModule } from './modules/generator/generator.module';
 import { VaultModule } from './modules/vault/vault.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
+
 
 @Module({
     imports: [
@@ -14,6 +16,7 @@ import { VaultModule } from './modules/vault/vault.module';
         AuthModule,
         GeneratorModule,
         VaultModule,
+        MarketplaceModule,
     ],
 })
 export class AppModule { }
