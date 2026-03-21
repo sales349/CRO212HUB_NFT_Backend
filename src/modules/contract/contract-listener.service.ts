@@ -6,6 +6,9 @@ import { MARKETPLACE_ABI } from './abi/marketplace.abi';
 import { LAUNCHPAD_COLLECTION_ABI } from './abi/launchpad-collection.abi';
 import { FeeAuditService, type LogSaleData } from '../fee-audit/fee-audit.service';
 import { ReputationService } from '../reputation/reputation.service';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Listing, ListingDocument } from '../marketplace/schemas/listing.schema';
 
 @Injectable()
 export class ContractListenerService implements OnModuleInit, OnModuleDestroy {
@@ -15,6 +18,7 @@ export class ContractListenerService implements OnModuleInit, OnModuleDestroy {
     constructor(
         private readonly feeAuditService: FeeAuditService,
         private readonly reputationService: ReputationService,
+        @InjectModel(Listing.name) private readonly listingModel: Model<ListingDocument>,
     ) { }
 
     async onModuleInit() {
@@ -203,6 +207,16 @@ export class ContractListenerService implements OnModuleInit, OnModuleDestroy {
 
         await this.feeAuditService.logSale(saleData);
 
+        // Update DB status to sold
+        try {
+            await this.listingModel.updateOne(
+                { onChainListingId: Number(args.listingId) },
+                { $set: { status: 'sold', soldAt: new Date(), buyerAddress: args.buyer.toLowerCase() } }
+            );
+        } catch (e) {
+            this.logger.warn(`Failed to update listing status to sold: ${e}`);
+        }
+
         // 2. Update buyer reputation
         try {
             await this.reputationService.updateFromActivity(args.buyer.toLowerCase(), 'purchase');
@@ -239,6 +253,12 @@ export class ContractListenerService implements OnModuleInit, OnModuleDestroy {
         this.reputationService.updateFromActivity(args.seller.toLowerCase(), 'listing').catch((e) =>
             this.logger.warn(`Failed to update seller listing reputation: ${e}`),
         );
+
+        // Sync with DB
+        this.listingModel.updateOne(
+            { collectionAddress: args.nftContract.toLowerCase(), tokenId: args.tokenId.toString() },
+            { $set: { onChainListingId: Number(args.listingId), status: 'active' } }
+        ).catch(e => this.logger.warn(`Failed to set onChainListingId for listed event: ${e}`));
     }
 
     private handleCancelledEvent(log: Log & { args?: Record<string, unknown> }) {
@@ -249,6 +269,12 @@ export class ContractListenerService implements OnModuleInit, OnModuleDestroy {
         if (!args) return;
 
         this.logger.log(`Cancelled event: listing #${args.listingId}`);
+
+        // Update DB status to cancelled
+        this.listingModel.updateOne(
+            { onChainListingId: Number(args.listingId) },
+            { $set: { status: 'cancelled', cancelledAt: new Date() } }
+        ).catch(e => this.logger.warn(`Failed to update listing status to cancelled: ${e}`));
     }
 
     private handleMintEvent(log: Log & { args?: Record<string, unknown> }, type: string) {
