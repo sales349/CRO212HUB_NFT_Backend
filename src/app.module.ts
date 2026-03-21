@@ -8,7 +8,6 @@ import { VaultModule } from './modules/vault/vault.module';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { ReputationModule } from './modules/reputation/reputation.module';
 
-
 @Module({
     imports: [
         DatabaseModule,
