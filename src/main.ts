@@ -42,7 +42,25 @@ async function bootstrap() {
 
     // CORS
     app.enableCors({
-        origin: appConfig.CORS_ORIGIN.split(','),
+        origin: (origin, cb) => {
+            // Allow if no origin (e.g. server-to-server) or in dev
+            if (!origin || appConfig.NODE_ENV !== 'production') {
+                return cb(null, true);
+            }
+            
+            // Allow any configured origin (ignoring trailing slashes)
+            const allowedOrigins = appConfig.CORS_ORIGIN.split(',').map(o => o.trim().replace(/\/$/, ''));
+            if (allowedOrigins.includes(origin)) {
+                return cb(null, true);
+            }
+
+            // Allow any Vercel deployment URL
+            if (origin.endsWith('.vercel.app')) {
+                return cb(null, true);
+            }
+
+            return cb(new Error('Not allowed by CORS'), false);
+        },
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         credentials: true,
     });
