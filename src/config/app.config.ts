@@ -14,6 +14,8 @@ const envSchema = z.object({
     PINATA_JWT: z.string().min(1),
     PINATA_GATEWAY: z.string().default('gateway.pinata.cloud'),
     TREASURY_WALLET: z.string().default('0x0000000000000000000000000000000000000000'),
+    NFT_CONTRACT_ADDRESS: z.string().startsWith('0x').length(42).default('0x0000000000000000000000000000000000000000'),
+    MARKETPLACE_CONTRACT_ADDRESS: z.string().startsWith('0x').length(42).default('0x0000000000000000000000000000000000000000'),
 });
 
 const parsed = envSchema.safeParse(process.env);
